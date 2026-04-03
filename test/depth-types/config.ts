@@ -33,6 +33,11 @@ export default buildConfigWithDefaults({
           name: 'polymorphic',
         },
         {
+          type: 'upload',
+          relationTo: 'media',
+          name: 'image',
+        },
+        {
           type: 'group',
           name: 'meta',
           fields: [
@@ -73,6 +78,16 @@ export default buildConfigWithDefaults({
           type: 'text',
           name: 'label',
           required: true,
+        },
+      ],
+    },
+    {
+      slug: 'media',
+      upload: true,
+      fields: [
+        {
+          type: 'text',
+          name: 'alt',
         },
       ],
     },
