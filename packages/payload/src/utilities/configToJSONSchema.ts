@@ -348,6 +348,7 @@ function entityOrFieldToJsDocs({
 
 type ConfigToJSONSchemaOptions = {
   forceInlineBlocks?: boolean
+  typeSafeDepth?: boolean
 }
 
 export function fieldsToJSONSchema(
@@ -524,6 +525,7 @@ export function fieldsToJSONSchema(
 
           case 'join': {
             let items: JSONSchema4
+            const joinDepthAware = opts.typeSafeDepth
 
             if (Array.isArray(field.collection)) {
               items = {
@@ -534,31 +536,35 @@ export function fieldsToJSONSchema(
                     relationTo: {
                       const: collection,
                     },
-                    value: {
-                      oneOf: [
-                        {
-                          type: collectionIDFieldTypes[collection],
+                    value: joinDepthAware
+                      ? { $ref: `#/definitions/${collection}` }
+                      : {
+                          oneOf: [
+                            {
+                              type: collectionIDFieldTypes[collection],
+                            },
+                            {
+                              $ref: `#/definitions/${collection}`,
+                            },
+                          ],
                         },
-                        {
-                          $ref: `#/definitions/${collection}`,
-                        },
-                      ],
-                    },
                   },
                   required: ['collectionSlug', 'value'],
                 })),
               }
             } else {
-              items = {
-                oneOf: [
-                  {
-                    type: collectionIDFieldTypes[field.collection],
-                  },
-                  {
-                    $ref: `#/definitions/${field.collection}`,
-                  },
-                ],
-              }
+              items = joinDepthAware
+                ? { $ref: `#/definitions/${field.collection}` }
+                : {
+                    oneOf: [
+                      {
+                        type: collectionIDFieldTypes[field.collection],
+                      },
+                      {
+                        $ref: `#/definitions/${field.collection}`,
+                      },
+                    ],
+                  }
             }
 
             fieldSchema = {
@@ -638,6 +644,10 @@ export function fieldsToJSONSchema(
           }
           case 'relationship':
           case 'upload': {
+            // When typeSafeDepth is enabled, relationship fields are typed as only the populated
+            // object (no ID union). The ApplyDepth utility type handles resolving to ID at depth 0.
+            const depthAware = opts.typeSafeDepth
+
             if (Array.isArray(field.relationTo)) {
               if (field.hasMany) {
                 fieldSchema = {
@@ -652,16 +662,18 @@ export function fieldsToJSONSchema(
                           relationTo: {
                             const: relation,
                           },
-                          value: {
-                            oneOf: [
-                              {
-                                type: collectionIDFieldTypes[relation],
+                          value: depthAware
+                            ? { $ref: `#/definitions/${relation}` }
+                            : {
+                                oneOf: [
+                                  {
+                                    type: collectionIDFieldTypes[relation],
+                                  },
+                                  {
+                                    $ref: `#/definitions/${relation}`,
+                                  },
+                                ],
                               },
-                              {
-                                $ref: `#/definitions/${relation}`,
-                              },
-                            ],
-                          },
                         },
                         required: ['value', 'relationTo'],
                       }
@@ -679,16 +691,18 @@ export function fieldsToJSONSchema(
                         relationTo: {
                           const: relation,
                         },
-                        value: {
-                          oneOf: [
-                            {
-                              type: collectionIDFieldTypes[relation],
+                        value: depthAware
+                          ? { $ref: `#/definitions/${relation}` }
+                          : {
+                              oneOf: [
+                                {
+                                  type: collectionIDFieldTypes[relation],
+                                },
+                                {
+                                  $ref: `#/definitions/${relation}`,
+                                },
+                              ],
                             },
-                            {
-                              $ref: `#/definitions/${relation}`,
-                            },
-                          ],
-                        },
                       },
                       required: ['value', 'relationTo'],
                     }
@@ -699,29 +713,47 @@ export function fieldsToJSONSchema(
               fieldSchema = {
                 ...baseFieldSchema,
                 type: withNullableJSONSchemaType('array', isRequired),
-                items: {
-                  oneOf: [
-                    {
-                      type: collectionIDFieldTypes[field.relationTo],
+                items: depthAware
+                  ? { $ref: `#/definitions/${field.relationTo}` }
+                  : {
+                      oneOf: [
+                        {
+                          type: collectionIDFieldTypes[field.relationTo],
+                        },
+                        {
+                          $ref: `#/definitions/${field.relationTo}`,
+                        },
+                      ],
                     },
-                    {
-                      $ref: `#/definitions/${field.relationTo}`,
-                    },
-                  ],
-                },
               }
             } else {
-              fieldSchema = {
-                ...baseFieldSchema,
-                oneOf: [
-                  {
-                    type: withNullableJSONSchemaType(
-                      collectionIDFieldTypes[field.relationTo]!,
-                      isRequired,
-                    ),
-                  },
-                  { $ref: `#/definitions/${field.relationTo}` },
-                ],
+              if (depthAware) {
+                // With typeSafeDepth, the field is just the referenced type (nullable if not required)
+                const refSchema: JSONSchema4 = { $ref: `#/definitions/${field.relationTo}` }
+                if (!isRequired) {
+                  fieldSchema = {
+                    ...baseFieldSchema,
+                    oneOf: [{ type: 'null' }, refSchema],
+                  }
+                } else {
+                  fieldSchema = {
+                    ...baseFieldSchema,
+                    ...refSchema,
+                  }
+                }
+              } else {
+                fieldSchema = {
+                  ...baseFieldSchema,
+                  oneOf: [
+                    {
+                      type: withNullableJSONSchemaType(
+                        collectionIDFieldTypes[field.relationTo]!,
+                        isRequired,
+                      ),
+                    },
+                    { $ref: `#/definitions/${field.relationTo}` },
+                  ],
+                }
               }
             }
 
@@ -956,6 +988,16 @@ export function entityToJSONSchema(
       collection: { type: 'string', enum: [entity.slug] },
     }
     fieldsSchema.required = [...(fieldsSchema.required || []), 'collection']
+  }
+
+  // When typeSafeDepth is enabled, add a __collection brand property to collection types.
+  // This allows the ApplyDepth utility type to identify relationship fields and transform them.
+  const isCollection = 'slug' in entity && config.collections.some((c) => c.slug === entity.slug)
+  if (opts.typeSafeDepth && isCollection) {
+    fieldsSchema.properties = {
+      ...fieldsSchema.properties,
+      __collection: { type: 'string', const: entity.slug },
+    }
   }
 
   const jsonSchema: JSONSchema4 = {
@@ -1262,6 +1304,11 @@ export function configToJSONSchema(
   i18n?: I18n,
   opts: ConfigToJSONSchemaOptions = {},
 ): JSONSchema4 {
+  // Derive typeSafeDepth from config if not explicitly set in opts
+  if (opts.typeSafeDepth === undefined && config.typescript?.typeSafeDepth) {
+    opts = { ...opts, typeSafeDepth: true }
+  }
+
   // a mutable Map to store custom top-level `interfaceName` types. Fields with an `interfaceName` property will be moved to the top-level definitions here
   const interfaceNameDefinitions: Map<string, JSONSchema4> = new Map()
 
@@ -1418,6 +1465,14 @@ export function configToJSONSchema(
             },
           }
         : {}),
+      ...(config.typescript?.typeSafeDepth
+        ? {
+            typeSafeDepth: {
+              type: 'boolean',
+              const: true,
+            },
+          }
+        : {}),
       user: generateAuthEntitySchemas(config.collections),
     },
     required: [
@@ -1429,6 +1484,7 @@ export function configToJSONSchema(
       'collectionsJoins',
       'globalsSelect',
       ...(config.typescript?.strictDraftTypes ? ['strictDraftTypes'] : []),
+      ...(config.typescript?.typeSafeDepth ? ['typeSafeDepth'] : []),
       'globals',
       'auth',
       'db',

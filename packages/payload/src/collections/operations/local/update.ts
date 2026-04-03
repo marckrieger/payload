@@ -8,6 +8,9 @@ import type {
   TypedLocale,
 } from '../../../index.js'
 import type {
+  AllowedDepth,
+  ApplyDepthToResult,
+  DefaultDepth,
   Document,
   PayloadRequest,
   PopulateType,
@@ -31,7 +34,11 @@ import { createLocalReq } from '../../../utilities/createLocalReq.js'
 import { updateOperation } from '../update.js'
 import { updateByIDOperation } from '../updateByID.js'
 
-export type BaseOptions<TSlug extends CollectionSlug, TSelect extends SelectType> = {
+export type BaseOptions<
+  TSlug extends CollectionSlug,
+  TSelect extends SelectType,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = {
   /**
    * Whether the current update should be marked as from autosave.
    * `versions.drafts.autosave` should be specified.
@@ -55,7 +62,7 @@ export type BaseOptions<TSlug extends CollectionSlug, TSelect extends SelectType
   /**
    * [Control auto-population](https://payloadcms.com/docs/queries/depth) of nested relationship and upload fields.
    */
-  depth?: number
+  depth?: TDepth
   /**
    * When set to `true`, a [database transactions](https://payloadcms.com/docs/database/transactions) will not be initialized.
    * @default false
@@ -142,6 +149,7 @@ export type BaseOptions<TSlug extends CollectionSlug, TSelect extends SelectType
 export type ByIDOptions<
   TSlug extends CollectionSlug,
   TSelect extends SelectFromCollectionSlug<TSlug>,
+  TDepth extends AllowedDepth | number = DefaultDepth,
 > = {
   /**
    * The ID of the document to update.
@@ -161,12 +169,13 @@ export type ByIDOptions<
    * A filter [query](https://payloadcms.com/docs/queries/overview)
    */
   where?: never
-} & BaseOptions<TSlug, TSelect> &
+} & BaseOptions<TSlug, TSelect, TDepth> &
   DraftFlagFromCollectionSlug<TSlug>
 
 export type ManyOptions<
   TSlug extends CollectionSlug,
   TSelect extends SelectFromCollectionSlug<TSlug>,
+  TDepth extends AllowedDepth | number = DefaultDepth,
 > = {
   /**
    * The ID of the document to update.
@@ -186,42 +195,53 @@ export type ManyOptions<
    * A filter [query](https://payloadcms.com/docs/queries/overview)
    */
   where: Where
-} & BaseOptions<TSlug, TSelect> &
+} & BaseOptions<TSlug, TSelect, TDepth> &
   DraftFlagFromCollectionSlug<TSlug>
 
 export type Options<
   TSlug extends CollectionSlug,
   TSelect extends SelectFromCollectionSlug<TSlug>,
-> = ByIDOptions<TSlug, TSelect> | ManyOptions<TSlug, TSelect>
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = ByIDOptions<TSlug, TSelect, TDepth> | ManyOptions<TSlug, TSelect, TDepth>
 
 async function updateLocal<
   TSlug extends CollectionSlug,
   TSelect extends SelectFromCollectionSlug<TSlug>,
+  TDepth extends AllowedDepth | number = DefaultDepth,
 >(
   payload: Payload,
-  options: ByIDOptions<TSlug, TSelect>,
-): Promise<TransformCollectionWithSelect<TSlug, TSelect>>
+  options: ByIDOptions<TSlug, TSelect, TDepth>,
+): Promise<ApplyDepthToResult<TransformCollectionWithSelect<TSlug, TSelect>, TDepth>>
 async function updateLocal<
   TSlug extends CollectionSlug,
   TSelect extends SelectFromCollectionSlug<TSlug>,
+  TDepth extends AllowedDepth | number = DefaultDepth,
 >(
   payload: Payload,
-  options: ManyOptions<TSlug, TSelect>,
-): Promise<BulkOperationResult<TSlug, TSelect>>
+  options: ManyOptions<TSlug, TSelect, TDepth>,
+): Promise<ApplyDepthToResult<BulkOperationResult<TSlug, TSelect>, TDepth>>
 async function updateLocal<
   TSlug extends CollectionSlug,
   TSelect extends SelectFromCollectionSlug<TSlug>,
+  TDepth extends AllowedDepth | number = DefaultDepth,
 >(
   payload: Payload,
-  options: Options<TSlug, TSelect>,
-): Promise<BulkOperationResult<TSlug, TSelect> | TransformCollectionWithSelect<TSlug, TSelect>>
+  options: Options<TSlug, TSelect, TDepth>,
+): Promise<
+  | ApplyDepthToResult<BulkOperationResult<TSlug, TSelect>, TDepth>
+  | ApplyDepthToResult<TransformCollectionWithSelect<TSlug, TSelect>, TDepth>
+>
 async function updateLocal<
   TSlug extends CollectionSlug,
   TSelect extends SelectFromCollectionSlug<TSlug>,
+  TDepth extends AllowedDepth | number = DefaultDepth,
 >(
   payload: Payload,
-  options: Options<TSlug, TSelect>,
-): Promise<BulkOperationResult<TSlug, TSelect> | TransformCollectionWithSelect<TSlug, TSelect>> {
+  options: Options<TSlug, TSelect, TDepth>,
+): Promise<
+  | ApplyDepthToResult<BulkOperationResult<TSlug, TSelect>, TDepth>
+  | ApplyDepthToResult<TransformCollectionWithSelect<TSlug, TSelect>, TDepth>
+> {
   const {
     id,
     autosave,

@@ -5,18 +5,26 @@ import type {
   RequestContext,
   TypedLocale,
 } from '../../../index.js'
-import type { Document, PayloadRequest, PopulateType, SelectType } from '../../../types/index.js'
-import type { CreateLocalReqOptions } from '../../../utilities/createLocalReq.js'
 import type {
-  DataFromCollectionSlug,
-  DraftFlagFromCollectionSlug,
-} from '../../config/types.js'
+  AllowedDepth,
+  ApplyDepthToResult,
+  DefaultDepth,
+  Document,
+  PayloadRequest,
+  PopulateType,
+  SelectType,
+} from '../../../types/index.js'
+import type { CreateLocalReqOptions } from '../../../utilities/createLocalReq.js'
+import type { DataFromCollectionSlug, DraftFlagFromCollectionSlug } from '../../config/types.js'
 
 import { APIError } from '../../../errors/index.js'
 import { createLocalReq } from '../../../utilities/createLocalReq.js'
 import { restoreVersionOperation } from '../restoreVersion.js'
 
-type BaseOptions<TSlug extends CollectionSlug> = {
+type BaseOptions<
+  TSlug extends CollectionSlug,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = {
   /**
    * the Collection slug to operate against.
    */
@@ -31,7 +39,7 @@ type BaseOptions<TSlug extends CollectionSlug> = {
   /**
    * [Control auto-population](https://payloadcms.com/docs/queries/depth) of nested relationship and upload fields.
    */
-  depth?: number
+  depth?: TDepth
   /**
    * Specify a [fallback locale](https://payloadcms.com/docs/configuration/localization) to use for any returned documents.
    */
@@ -71,13 +79,18 @@ type BaseOptions<TSlug extends CollectionSlug> = {
   user?: Document
 } & Pick<FindOptions<TSlug, SelectType>, 'select'>
 
-export type Options<TSlug extends CollectionSlug> =
-  BaseOptions<TSlug> & DraftFlagFromCollectionSlug<TSlug>
+export type Options<
+  TSlug extends CollectionSlug,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = BaseOptions<TSlug, TDepth> & DraftFlagFromCollectionSlug<TSlug>
 
-export async function restoreVersionLocal<TSlug extends CollectionSlug>(
+export async function restoreVersionLocal<
+  TSlug extends CollectionSlug,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+>(
   payload: Payload,
-  options: Options<TSlug>,
-): Promise<DataFromCollectionSlug<TSlug>> {
+  options: Options<TSlug, TDepth>,
+): Promise<ApplyDepthToResult<DataFromCollectionSlug<TSlug>, TDepth>> {
   const {
     id,
     collection: collectionSlug,
@@ -110,5 +123,5 @@ export async function restoreVersionLocal<TSlug extends CollectionSlug>(
     showHiddenFields,
   }
 
-  return restoreVersionOperation(args)
+  return restoreVersionOperation(args) as any
 }

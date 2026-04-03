@@ -7,6 +7,9 @@ import type {
   TypedLocale,
 } from '../../../index.js'
 import type {
+  AllowedDepth,
+  ApplyDepthToResult,
+  DefaultDepth,
   Document,
   PayloadRequest,
   PopulateType,
@@ -14,16 +17,17 @@ import type {
   TransformGlobalWithSelect,
 } from '../../../types/index.js'
 import type { CreateLocalReqOptions } from '../../../utilities/createLocalReq.js'
-import type {
-  DraftFlagFromGlobalSlug,
-  SelectFromGlobalSlug,
-} from '../../config/types.js'
+import type { DraftFlagFromGlobalSlug, SelectFromGlobalSlug } from '../../config/types.js'
 
 import { APIError } from '../../../errors/index.js'
 import { createLocalReq } from '../../../utilities/createLocalReq.js'
 import { findOneOperation, type GlobalFindOneArgs } from '../findOne.js'
 
-type BaseFindOneOptions<TSlug extends GlobalSlug, TSelect extends SelectType> = {
+type BaseFindOneOptions<
+  TSlug extends GlobalSlug,
+  TSelect extends SelectType,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = {
   /**
    * [Context](https://payloadcms.com/docs/hooks/context), which will then be passed to `context` and `req.context`,
    * which can be read by hooks. Useful if you want to pass additional information to the hooks which
@@ -39,7 +43,7 @@ type BaseFindOneOptions<TSlug extends GlobalSlug, TSelect extends SelectType> = 
   /**
    * [Control auto-population](https://payloadcms.com/docs/queries/depth) of nested relationship and upload fields.
    */
-  depth?: number
+  depth?: TDepth
   /**
    * When set to `true`, errors will not be thrown.
    */
@@ -92,16 +96,20 @@ type BaseFindOneOptions<TSlug extends GlobalSlug, TSelect extends SelectType> = 
 } & Pick<FindOptions<string, SelectType>, 'select'> &
   Pick<GlobalFindOneArgs, 'flattenLocales'>
 
-export type Options<TSlug extends GlobalSlug, TSelect extends SelectType> =
-  BaseFindOneOptions<TSlug, TSelect> & DraftFlagFromGlobalSlug<TSlug>
+export type Options<
+  TSlug extends GlobalSlug,
+  TSelect extends SelectType,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = BaseFindOneOptions<TSlug, TSelect, TDepth> & DraftFlagFromGlobalSlug<TSlug>
 
 export async function findOneGlobalLocal<
   TSlug extends GlobalSlug,
   TSelect extends SelectFromGlobalSlug<TSlug>,
+  TDepth extends AllowedDepth | number = DefaultDepth,
 >(
   payload: Payload,
-  options: Options<TSlug, TSelect>,
-): Promise<TransformGlobalWithSelect<TSlug, TSelect>> {
+  options: Options<TSlug, TSelect, TDepth>,
+): Promise<ApplyDepthToResult<TransformGlobalWithSelect<TSlug, TSelect>, TDepth>> {
   const {
     slug: globalSlug,
     data,
@@ -136,5 +144,5 @@ export async function findOneGlobalLocal<
     req: await createLocalReq(options as CreateLocalReqOptions, payload),
     select,
     showHiddenFields,
-  })
+  }) as any
 }

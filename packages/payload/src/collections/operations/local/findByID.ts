@@ -9,17 +9,17 @@ import type {
   TypedLocale,
 } from '../../../index.js'
 import type {
+  AllowedDepth,
+  ApplyDepthToResult,
   ApplyDisableErrors,
+  DefaultDepth,
   Document,
   PayloadRequest,
   PopulateType,
   TransformCollectionWithSelect,
 } from '../../../types/index.js'
 import type { CreateLocalReqOptions } from '../../../utilities/createLocalReq.js'
-import type {
-  DraftFlagFromCollectionSlug,
-  SelectFromCollectionSlug,
-} from '../../config/types.js'
+import type { DraftFlagFromCollectionSlug, SelectFromCollectionSlug } from '../../config/types.js'
 
 import { APIError } from '../../../errors/index.js'
 import { createLocalReq } from '../../../utilities/createLocalReq.js'
@@ -29,6 +29,7 @@ type BaseFindByIDOptions<
   TSlug extends CollectionSlug,
   TDisableErrors extends boolean,
   TSelect extends SelectType,
+  TDepth extends AllowedDepth | number = DefaultDepth,
 > = {
   /**
    * the Collection slug to operate against.
@@ -54,7 +55,7 @@ type BaseFindByIDOptions<
   /**
    * [Control auto-population](https://payloadcms.com/docs/queries/depth) of nested relationship and upload fields.
    */
-  depth?: number
+  depth?: TDepth
   /**
    * When set to `true`, errors will not be thrown.
    * `null` will be returned instead, if the document on this ID was not found.
@@ -122,16 +123,23 @@ export type Options<
   TSlug extends CollectionSlug,
   TDisableErrors extends boolean,
   TSelect extends SelectType,
-> = BaseFindByIDOptions<TSlug, TDisableErrors, TSelect> & DraftFlagFromCollectionSlug<TSlug>
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = BaseFindByIDOptions<TSlug, TDisableErrors, TSelect, TDepth> & DraftFlagFromCollectionSlug<TSlug>
 
 export async function findByIDLocal<
   TSlug extends CollectionSlug,
   TDisableErrors extends boolean,
   TSelect extends SelectFromCollectionSlug<TSlug>,
+  TDepth extends AllowedDepth | number = DefaultDepth,
 >(
   payload: Payload,
-  options: Options<TSlug, TDisableErrors, TSelect>,
-): Promise<ApplyDisableErrors<TransformCollectionWithSelect<TSlug, TSelect>, TDisableErrors>> {
+  options: Options<TSlug, TDisableErrors, TSelect, TDepth>,
+): Promise<
+  ApplyDisableErrors<
+    ApplyDepthToResult<TransformCollectionWithSelect<TSlug, TSelect>, TDepth>,
+    TDisableErrors
+  >
+> {
   const {
     id,
     collection: collectionSlug,
@@ -175,5 +183,5 @@ export async function findByIDLocal<
     select,
     showHiddenFields,
     trash,
-  })
+  }) as any
 }

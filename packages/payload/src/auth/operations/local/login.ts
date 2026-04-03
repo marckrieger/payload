@@ -4,18 +4,21 @@ import type {
   Payload,
   RequestContext,
 } from '../../../index.js'
-import type { PayloadRequest } from '../../../types/index.js'
+import type { AllowedDepth, DefaultDepth, PayloadRequest } from '../../../types/index.js'
 import type { LoginResult } from '../login.js'
 
 import { APIError } from '../../../errors/index.js'
 import { createLocalReq } from '../../../utilities/createLocalReq.js'
 import { loginOperation } from '../login.js'
 
-export type Options<TSlug extends AuthCollectionSlug> = {
+export type Options<
+  TSlug extends AuthCollectionSlug,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = {
   collection: TSlug
   context?: RequestContext
   data: AuthOperationsFromCollectionSlug<TSlug>['login']
-  depth?: number
+  depth?: TDepth
   fallbackLocale?: string
   locale?: string
   overrideAccess?: boolean
@@ -24,10 +27,10 @@ export type Options<TSlug extends AuthCollectionSlug> = {
   trash?: boolean
 }
 
-export async function loginLocal<TSlug extends AuthCollectionSlug>(
-  payload: Payload,
-  options: Options<TSlug>,
-): Promise<LoginResult<TSlug>> {
+export async function loginLocal<
+  TSlug extends AuthCollectionSlug,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+>(payload: Payload, options: Options<TSlug, TDepth>): Promise<LoginResult<TSlug>> {
   const {
     collection: collectionSlug,
     data,
