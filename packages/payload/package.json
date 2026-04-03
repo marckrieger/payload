@@ -1,6 +1,6 @@
 {
   "name": "@marckrieger/payload",
-  "version": "3.81.0",
+  "version": "3.81.1",
   "description": "Node, React, Headless CMS and Application Framework built on Next.js",
   "keywords": [
     "admin panel",
@@ -100,7 +100,7 @@
   },
   "dependencies": {
     "@next/env": "^15.1.5",
-    "@payloadcms/translations": "workspace:*",
+    "@payloadcms/translations": "3.81.0",
     "@types/busboy": "1.5.4",
     "ajv": "8.18.0",
     "bson-objectid": "2.0.4",
@@ -134,7 +134,7 @@
   "devDependencies": {
     "@hyrious/esbuild-plugin-commonjs": "0.2.6",
     "@monaco-editor/react": "4.7.0",
-    "@payloadcms/eslint-config": "workspace:*",
+    "@payloadcms/eslint-config": "3.81.0",
     "@types/json-schema": "7.0.15",
     "@types/minimist": "1.2.2",
     "@types/nodemailer": "7.0.2",
