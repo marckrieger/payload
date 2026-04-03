@@ -1,6 +1,6 @@
 {
-  "name": "@marckrieger/payload",
-  "version": "3.81.1",
+  "name": "payload",
+  "version": "3.81.2",
   "description": "Node, React, Headless CMS and Application Framework built on Next.js",
   "keywords": [
     "admin panel",
