@@ -70,6 +70,7 @@ export interface Config {
     posts: Post;
     categories: Category;
     tags: Tag;
+    media: Media;
     'payload-kv': PayloadKv;
     users: User;
     'payload-locked-documents': PayloadLockedDocument;
@@ -85,6 +86,7 @@ export interface Config {
     posts: PostsSelect<false> | PostsSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     tags: TagsSelect<false> | TagsSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -92,7 +94,7 @@ export interface Config {
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
   };
   db: {
-    defaultIDType: string;
+    defaultIDType: number;
   };
   fallbackLocale: null;
   globals: {
@@ -135,7 +137,7 @@ export interface UserAuthOperations {
  * via the `definition` "posts".
  */
 export interface Post {
-  id: string;
+  id: number;
   title: string;
   category?: null | Category;
   categories?: Category[] | null;
@@ -148,6 +150,7 @@ export interface Post {
         relationTo: 'tags';
         value: Tag;
       } | null);
+  image?: null | Media;
   meta?: {
     nestedRelation?: null | Category;
   };
@@ -160,7 +163,7 @@ export interface Post {
  * via the `definition` "categories".
  */
 export interface Category {
-  id: string;
+  id: number;
   name: string;
   featuredPost?: null | Post;
   relatedPosts?: {
@@ -177,7 +180,7 @@ export interface Category {
  * via the `definition` "tags".
  */
 export interface Tag {
-  id: string;
+  id: number;
   label: string;
   updatedAt: string;
   createdAt: string;
@@ -185,10 +188,30 @@ export interface Tag {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  alt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+  __collection?: 'media';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
-  id: string;
+  id: number;
   key: string;
   data:
     | {
@@ -206,7 +229,7 @@ export interface PayloadKv {
  * via the `definition` "users".
  */
 export interface User {
-  id: string;
+  id: number;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -232,7 +255,7 @@ export interface User {
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
-  id: string;
+  id: number;
   document?:
     | ({
         relationTo: 'posts';
@@ -245,6 +268,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'tags';
         value: Tag;
+      } | null)
+    | ({
+        relationTo: 'media';
+        value: Media;
       } | null)
     | ({
         relationTo: 'users';
@@ -264,7 +291,7 @@ export interface PayloadLockedDocument {
  * via the `definition` "payload-preferences".
  */
 export interface PayloadPreference {
-  id: string;
+  id: number;
   user: {
     relationTo: 'users';
     value: User;
@@ -288,7 +315,7 @@ export interface PayloadPreference {
  * via the `definition` "payload-migrations".
  */
 export interface PayloadMigration {
-  id: string;
+  id: number;
   name?: string | null;
   batch?: number | null;
   updatedAt: string;
@@ -304,6 +331,7 @@ export interface PostsSelect<T extends boolean = true> {
   category?: T;
   categories?: T;
   polymorphic?: T;
+  image?: T;
   meta?:
     | T
     | {
@@ -331,6 +359,24 @@ export interface TagsSelect<T extends boolean = true> {
   label?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -399,7 +445,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
  * via the `definition` "settings".
  */
 export interface Setting {
-  id: string;
+  id: number;
   siteName?: string | null;
   featuredPost?: null | Post;
   updatedAt?: string | null;
