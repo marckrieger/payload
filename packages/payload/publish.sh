@@ -1,26 +1,46 @@
 #!/bin/bash
 # Publish @marckrieger/payload to npm
-# Temporarily renames the package, removes workspace refs, publishes, then restores
+# Temporarily rewrites package.json for publishing, then restores it
 set -e
 
 cd "$(dirname "$0")"
 
 # Verify dist exists
 if [ ! -f "dist/index.js" ]; then
-  echo "Error: dist/ not built. Run 'pnpm install && pnpm -w run build:core' from the monorepo root first."
+  echo "Error: dist/ not built. Run 'pnpm run build' from packages/payload first."
   exit 1
 fi
 
 # Backup original
 cp package.json package.json.bak
 
-# Rename for publishing
-sed -i 's/"name": "payload"/"name": "@marckrieger\/payload"/' package.json
+# Use node to rewrite package.json for publishing:
+# - Rename to @marckrieger/payload
+# - Apply publishConfig.exports over exports
+# - Apply publishConfig.main and publishConfig.types
+# - Remove workspace:* devDependencies
+# - Remove publishConfig (no longer needed in published version)
+node -e "
+const pkg = require('./package.json');
+pkg.name = '@marckrieger/payload';
+if (pkg.publishConfig) {
+  if (pkg.publishConfig.exports) pkg.exports = pkg.publishConfig.exports;
+  if (pkg.publishConfig.main) pkg.main = pkg.publishConfig.main;
+  if (pkg.publishConfig.types) pkg.types = pkg.publishConfig.types;
+}
+delete pkg.publishConfig;
+// Remove workspace: devDependencies
+if (pkg.devDependencies) {
+  for (const [k, v] of Object.entries(pkg.devDependencies)) {
+    if (typeof v === 'string' && v.includes('workspace:')) {
+      delete pkg.devDependencies[k];
+    }
+  }
+}
+require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+"
 
-# Remove workspace:* devDependencies (not needed at runtime)
-sed -i '/"@payloadcms\/eslint-config": "workspace:\*"/d' package.json
-
-# Publish
+echo "Publishing @marckrieger/payload..."
 npm publish --access public
 
 # Restore original
