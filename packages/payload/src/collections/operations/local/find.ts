@@ -10,6 +10,9 @@ import type {
   TypedLocale,
 } from '../../../index.js'
 import type {
+  AllowedDepth,
+  ApplyDepthToResult,
+  DefaultDepth,
   Document,
   DraftTransformCollectionWithSelect,
   PayloadRequest,
@@ -20,16 +23,17 @@ import type {
   Where,
 } from '../../../types/index.js'
 import type { CreateLocalReqOptions } from '../../../utilities/createLocalReq.js'
-import type {
-  DraftFlagFromCollectionSlug,
-  SelectFromCollectionSlug,
-} from '../../config/types.js'
+import type { DraftFlagFromCollectionSlug, SelectFromCollectionSlug } from '../../config/types.js'
 
 import { APIError } from '../../../errors/index.js'
 import { createLocalReq } from '../../../utilities/createLocalReq.js'
 import { findOperation } from '../find.js'
 
-type BaseFindOptions<TSlug extends CollectionSlug, TSelect extends SelectType> = {
+type BaseFindOptions<
+  TSlug extends CollectionSlug,
+  TSelect extends SelectType,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = {
   /**
    * the Collection slug to operate against.
    */
@@ -49,7 +53,7 @@ type BaseFindOptions<TSlug extends CollectionSlug, TSelect extends SelectType> =
   /**
    * [Control auto-population](https://payloadcms.com/docs/queries/depth) of nested relationship and upload fields.
    */
-  depth?: number
+  depth?: TDepth
   /**
    * When set to `true`, errors will not be thrown.
    */
@@ -180,27 +184,37 @@ type BaseFindOptions<TSlug extends CollectionSlug, TSelect extends SelectType> =
   where?: Where
 }
 
-export type Options<TSlug extends CollectionSlug, TSelect extends SelectType> =
-  BaseFindOptions<TSlug, TSelect> & DraftFlagFromCollectionSlug<TSlug>
+export type Options<
+  TSlug extends CollectionSlug,
+  TSelect extends SelectType,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = BaseFindOptions<TSlug, TSelect, TDepth> & DraftFlagFromCollectionSlug<TSlug>
 
 // Backward compatibility export
-export type FindOptions<TSlug extends CollectionSlug, TSelect extends SelectType> =
-  Options<TSlug, TSelect>
+export type FindOptions<
+  TSlug extends CollectionSlug,
+  TSelect extends SelectType,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = Options<TSlug, TSelect, TDepth>
 
 export async function findLocal<
   TSlug extends CollectionSlug,
   TSelect extends SelectFromCollectionSlug<TSlug>,
   TDraft extends boolean = false,
+  TDepth extends AllowedDepth | number = DefaultDepth,
 >(
   payload: Payload,
-  options: { draft?: TDraft } & FindOptions<TSlug, TSelect>,
+  options: { draft?: TDraft } & FindOptions<TSlug, TSelect, TDepth>,
 ): Promise<
   PaginatedDocs<
-    TDraft extends true
-      ? PayloadTypes extends { strictDraftTypes: true }
-        ? DraftTransformCollectionWithSelect<TSlug, TSelect>
-        : TransformCollectionWithSelect<TSlug, TSelect>
-      : TransformCollectionWithSelect<TSlug, TSelect>
+    ApplyDepthToResult<
+      TDraft extends true
+        ? PayloadTypes extends { strictDraftTypes: true }
+          ? DraftTransformCollectionWithSelect<TSlug, TSelect>
+          : TransformCollectionWithSelect<TSlug, TSelect>
+        : TransformCollectionWithSelect<TSlug, TSelect>,
+      TDepth
+    >
   >
 > {
   const {
@@ -250,5 +264,5 @@ export async function findLocal<
     sort,
     trash,
     where,
-  })
+  }) as any
 }

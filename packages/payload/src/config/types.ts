@@ -1528,6 +1528,19 @@ export type Config = {
      * @todo Remove in v4. Strict draft types will become the default behavior.
      */
     strictDraftTypes?: boolean
+
+    /**
+     * Enable depth-aware type safety for relationship fields. When enabled, Local API return types
+     * narrow based on the `depth` parameter: at `depth: 0`, relationships resolve to their ID type;
+     * at `depth: 1+`, they resolve to the populated object type with decremented depth applied to
+     * nested relationships.
+     *
+     * This eliminates the need for runtime type checks like `typeof post.author === 'string'`
+     * when you know the depth of your query.
+     *
+     * @default false
+     */
+    typeSafeDepth?: boolean
   }
   /**
    * Customize the handling of incoming file uploads for collections that have uploads enabled.

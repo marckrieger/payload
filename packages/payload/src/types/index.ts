@@ -15,6 +15,7 @@ import type {
   DataFromGlobalSlug,
   GlobalSlug,
   Payload,
+  PayloadTypes,
   RequestContext,
   TypedCollectionJoins,
   TypedCollectionSelect,
@@ -283,3 +284,121 @@ export type PickPreserveOptional<T, K extends keyof T> = Partial<
   Pick<T, Extract<K, RequiredKeys<T>>>
 
 export type MaybePromise<T> = Promise<T> | T
+
+// ─── Depth-Aware Relationship Types ─────────────────────────────────────────
+// When `typescript.typeSafeDepth` is enabled in the Payload config, these utilities
+// provide compile-time type safety for relationship fields based on the `depth` parameter.
+
+/**
+ * Valid depth values for type-safe depth queries (0 through 10, matching Payload's maxDepth).
+ */
+export type AllowedDepth = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+
+/**
+ * Default depth type. When `typeSafeDepth` is enabled, defaults to the config's `defaultDepth` (typically 2).
+ * When not enabled, resolves to `number` which disables depth-based type narrowing.
+ */
+export type DefaultDepth = PayloadTypes extends { typeSafeDepth: true } ? 2 : number
+
+/**
+ * Decrements a depth value by 1 using a tuple lookup.
+ * - `DecrementDepth<3>` → `2`
+ * - `DecrementDepth<0>` → `never`
+ * - `DecrementDepth<number>` → `number` (passthrough for non-literal depth)
+ */
+export type DecrementDepth<D extends AllowedDepth | number> = number extends D
+  ? number
+  : D extends AllowedDepth
+    ? [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9][D]
+    : never
+
+/**
+ * Brand interface used to mark generated collection types when `typeSafeDepth` is enabled.
+ * The `__collection` property identifies the collection slug for depth-aware type resolution.
+ */
+export interface CollectionBrand<TSlug extends string = string> {
+  __collection?: TSlug
+}
+
+/**
+ * Extracts the ID type for a given collection slug.
+ */
+type CollectionIDType<TSlug extends string> = TSlug extends CollectionSlug
+  ? DataFromCollectionSlug<TSlug>['id']
+  : number | string
+
+/**
+ * Core recursive type that transforms relationship fields based on depth.
+ *
+ * At depth 0: branded collection types resolve to their ID type.
+ * At depth > 0: branded collection types resolve to the populated object with depth decremented.
+ * When depth is `number` (non-literal): returns the type unchanged (backwards-compatible union).
+ *
+ * The recursion works by:
+ * 1. Checking if a property value is branded with `__collection`
+ * 2. If so, replacing it with either the ID or the recursively depth-applied type
+ * 3. Handling arrays, nullables, polymorphic relationships, and nested objects
+ */
+export type ApplyDepth<T, D extends AllowedDepth | number> =
+  // When depth is a non-literal number, pass through unchanged (backwards-compatible)
+  number extends D
+    ? T
+    : // Handle arrays
+      T extends (infer U)[]
+      ? ApplyDepth<U, D>[]
+      : // Handle null unions
+        T extends null
+        ? null
+        : // Handle branded collection types (relationship fields)
+          T extends CollectionBrand<infer TSlug>
+          ? D extends 0
+            ? CollectionIDType<TSlug>
+            : D extends AllowedDepth
+              ? ApplyDepthToObject<Omit<T, '__collection'>, DecrementDepth<D>>
+              : T
+          : // Handle plain objects recursively (for groups, tabs, blocks, etc.)
+            T extends object
+            ? ApplyDepthToObject<T, D>
+            : T
+
+/**
+ * Applies depth transformation to all properties of an object type.
+ */
+type ApplyDepthToObject<T, D extends AllowedDepth | number> = {
+  [K in keyof T]: ApplyDepth<T[K], D>
+}
+
+/**
+ * Applies depth transformation to an API result type (top-level).
+ * Unlike `ApplyDepth`, this never resolves the top-level object itself to an ID —
+ * it always treats it as an object and applies depth to its properties.
+ * The `__collection` brand is stripped from the top-level result.
+ *
+ * This is the correct entry point for all Local API return types.
+ */
+export type ApplyDepthToResult<T, D extends AllowedDepth | number> = number extends D
+  ? T
+  : T extends object
+    ? { [K in keyof T as K extends '__collection' ? never : K]: ApplyDepth<T[K], D> }
+    : T
+
+/**
+ * Convenience wrapper that applies depth to a collection result type.
+ * Used in local API return types to transform results based on the depth parameter.
+ *
+ * When `typeSafeDepth` is not enabled, `DefaultDepth` is `number`, so `ApplyDepthToResult` passes through unchanged.
+ */
+export type ApplyDepthToCollection<
+  TSlug extends CollectionSlug,
+  TSelect extends SelectType,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = ApplyDepthToResult<TransformCollectionWithSelect<TSlug, TSelect>, TDepth>
+
+/**
+ * Convenience wrapper that applies depth to a global result type.
+ */
+export type ApplyDepthToGlobal<
+  TSlug extends GlobalSlug,
+  TSelect extends SelectType,
+  TDepth extends AllowedDepth | number = DefaultDepth,
+> = ApplyDepthToResult<TransformGlobalWithSelect<TSlug, TSelect>, TDepth>
