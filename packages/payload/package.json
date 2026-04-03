@@ -134,7 +134,7 @@
   "devDependencies": {
     "@hyrious/esbuild-plugin-commonjs": "0.2.6",
     "@monaco-editor/react": "4.7.0",
-    "@payloadcms/eslint-config": "3.81.0",
+    "@payloadcms/eslint-config": "workspace:*",
     "@types/json-schema": "7.0.15",
     "@types/minimist": "1.2.2",
     "@types/nodemailer": "7.0.2",
