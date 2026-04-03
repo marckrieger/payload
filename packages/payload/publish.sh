@@ -24,7 +24,7 @@ cp package.json package.json.bak
 node -e "
 const pkg = require('./package.json');
 pkg.name = '@marckrieger/payload';
-pkg.version = '3.81.0';
+pkg.version = '3.81.0-1';
 if (pkg.publishConfig) {
   if (pkg.publishConfig.exports) pkg.exports = pkg.publishConfig.exports;
   if (pkg.publishConfig.main) pkg.main = pkg.publishConfig.main;
