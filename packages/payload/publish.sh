@@ -16,6 +16,7 @@ cp package.json package.json.bak
 
 # Use node to rewrite package.json for publishing:
 # - Rename to @marckrieger/payload
+# - Keep version at 3.81.0 to match other @payloadcms/* packages
 # - Apply publishConfig.exports over exports
 # - Apply publishConfig.main and publishConfig.types
 # - Remove workspace:* devDependencies
@@ -23,6 +24,7 @@ cp package.json package.json.bak
 node -e "
 const pkg = require('./package.json');
 pkg.name = '@marckrieger/payload';
+pkg.version = '3.81.0';
 if (pkg.publishConfig) {
   if (pkg.publishConfig.exports) pkg.exports = pkg.publishConfig.exports;
   if (pkg.publishConfig.main) pkg.main = pkg.publishConfig.main;
@@ -40,7 +42,7 @@ if (pkg.devDependencies) {
 require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
 "
 
-echo "Publishing @marckrieger/payload..."
+echo "Publishing @marckrieger/payload@3.81.0..."
 npm publish --access public
 
 # Restore original
