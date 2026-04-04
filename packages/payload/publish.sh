@@ -23,7 +23,7 @@ cp package.json package.json.bak
 # - Remove publishConfig (no longer needed in published version)
 node -e "
 const pkg = require('./package.json');
-pkg.name = '@marckrieger/payloadcms';
+pkg.name = '@marckrieger/payload';
 pkg.version = '3.81.0';
 if (pkg.publishConfig) {
   if (pkg.publishConfig.exports) pkg.exports = pkg.publishConfig.exports;
@@ -42,7 +42,7 @@ if (pkg.devDependencies) {
 require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
 "
 
-echo "Publishing @marckrieger/payloadcms@3.81.0..."
+echo "Publishing @marckrieger/payload@3.81.0..."
 npm publish --access public
 
 # Restore original
